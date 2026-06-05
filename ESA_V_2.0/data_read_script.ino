@@ -20,6 +20,8 @@ float heartValue;
 float gsrValue;
 float muscleValue;
 
+String command;
+
 void setup() {
   Serial.begin(9600);
   Wire.begin();
@@ -54,30 +56,42 @@ void setup() {
 }
 
 void loop() {
-  if (accel.update()) {
-    Serial.print(accel.getX());
-    Serial.print(",");
-    Serial.print(accel.getY());
-    Serial.print(",");
-    Serial.print(accel.getZ());
-    Serial.println("");
-  } else {
-    Serial.println("update failed");
-    while (1) {
-      delay(100);
+  if (Serial.available()) {
+    command = Serial.readStringUntil("\n");
+    command.trim();
+
+    if (command == "SEND") {
+      if (accel.update()) {
+        Serial.print("X: ");
+        Serial.print(accel.getX());
+        Serial.print(", ");
+        Serial.print("Y: ");
+        Serial.print(accel.getY());
+        Serial.print(", ");
+        Serial.print("Z: ")
+          Serial.print(accel.getZ());
+        Serial.println("");
+      } else {
+        Serial.println("Update failed");
+      }
+
+      heartValue = analogRead(heartPin);
+      Serial.print("Heart rate: ");
+      Serial.print(heartValue);
+      Serial.println("");
+
+      gsrValue = analogRead(gsrPin);
+      Serial.print("Skin conductance: ");
+      Serial.print(gsrValue);
+      Serial.println("");
+
+      muscleValue = analogRead(musclePin);
+      Serial.print("EMG value: ")
+      Serial.print(muscleValue);
+      Serial.println("");
+
+    } else if (command == "END") {
+      Serial.println("Session completed.")
     }
   }
-  delay(300);
-
-  heartValue = analogRead(heartPin);
-  Serial.println(heartValue);
-  delay(1000);
-
-  gsrValue = analogRead(gsrPin);
-  Serial.println(gsrValue);
-  delay(1000);
-
-  muscleValue = analogRead(musclePin);
-  Serial.println(muscleValue);
-  delay(1000);
 }
