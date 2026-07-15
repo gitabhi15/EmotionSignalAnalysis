@@ -16,14 +16,24 @@ const int heartPin = 3;
 const int gsrPin = 4;
 const int musclePin = 5;
 
-float heartValue;
-float gsrValue;
-float muscleValue;
+int heartValue;
+int gsrValue;
+int muscleValue;
 
-String command;
+const unsigned long gsrInterval = 100000;
+const unsigned long emgInterval = 5000;
+const unsigned long adxlInterval = 20000;
+const unsigned long heartInterval = 10000;
+
+unsigned long lastGsrTime = 0;
+unsigned long lastEmgTime = 0;
+unsigned long lastAdxlTime = 0;
+unsigned long lastHeartTime = 0;
+
+bool isLogging = false;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Wire.begin();
   lcd.begin(LCD_COLS, LCD_ROWS);
   pinMode(heartPin, INPUT);
@@ -57,41 +67,58 @@ void setup() {
 
 void loop() {
   if (Serial.available()) {
-    command = Serial.readStringUntil("\n");
+    String command = Serial.readStringUntil('\n');
     command.trim();
 
     if (command == "SEND") {
+      isLogging = true;
+      Serial.println("Session started.");
+    } else if (command == "END") {
+      isLogging = false;
+      Serial.println("Session ended.");
+    }
+  }
+  if (isLogging) {
+    unsigned long currentMicros = micros();
+    if (currentMicros - lastAdxlTime >= adxlInterval) {
       if (accel.update()) {
+        lastAdxlTime = currentMicros;
         Serial.print("X: ");
         Serial.print(accel.getX());
         Serial.print(", ");
         Serial.print("Y: ");
         Serial.print(accel.getY());
         Serial.print(", ");
-        Serial.print("Z: ")
-          Serial.print(accel.getZ());
+        Serial.print("Z: ");
+        Serial.print(accel.getZ());
         Serial.println("");
       } else {
         Serial.println("Update failed");
       }
+    }
 
+    if (currentMicros - lastHeartTime >= heartInterval) {
+      lastHeartTime = currentMicros;
       heartValue = analogRead(heartPin);
       Serial.print("Heart rate: ");
       Serial.print(heartValue);
       Serial.println("");
+    }
 
+    if (currentMicros - lastGsrTime >= gsrInterval) {
+      lastGsrTime = currentMicros;
       gsrValue = analogRead(gsrPin);
       Serial.print("Skin conductance: ");
       Serial.print(gsrValue);
       Serial.println("");
+    }
 
+    if (currentMicros - lastEmgTime >= emgInterval) {
+      lastEmgTime = currentMicros;
       muscleValue = analogRead(musclePin);
-      Serial.print("EMG value: ")
+      Serial.print("EMG value: ");
       Serial.print(muscleValue);
       Serial.println("");
-
-    } else if (command == "END") {
-      Serial.println("Session completed.")
     }
   }
 }
