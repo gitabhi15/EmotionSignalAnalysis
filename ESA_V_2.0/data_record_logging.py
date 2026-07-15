@@ -21,20 +21,36 @@ class logger:
                 writer = csv.writer(file)
                 writer.writerow(["Timestamp", "Pulse", "GSR", "EMG", "Acc_X", "Acc_Y", "Acc_Z", "Label"])
 
-                print("Sending command over to Arduino\n"f"Streaming data to {filename}")
-                self.ser.write(b'SEND')
+                print("Sending command over to device.\n"f"Streaming data to {filename}.")
+                self.ser.write(b'SEND\n')
+
+                curr_pulse = ""
+                curr_gsr = ""
+                curr_x, curr_y, curr_z = "", "", ""
 
                 while True:
                     if self.ser.in_waiting > 0:
                         line = self.ser.readline().decode('utf-8').strip()
                         data = line.split(",")
 
-                        if len(data) == 6:
-                            writer.writerow([time.time()] + data + [emotion_label])
+                        if line.startswith("Heart rate:"):
+                            curr_pulse = line.split(":")[1].strip()
+                        elif line.startswith("Skin conductance:"):
+                            curr_gsr = line.split(":")[1].strip()
+                        elif line.startswith("X:"):
+                            parts = line.split(",")
+                            if len(parts) == 3:
+                                curr_x = parts[0].split(":")[1].strip()
+                                curr_y = parts[1].split(":")[1].strip()
+                                curr_z = parts[2].split(":")[1].strip()
+                        elif line.startswith("EMG value:"):
+                            emg_val = line.split(":")[1].strip()
+
+                            writer.writerow([time.time(), curr_pulse, curr_gsr, emg_val, curr_x, curr_y, curr_z, emotion_label])
 
 
         except KeyboardInterrupt:
-            print("Session recording complete, sending command over to Arduino")
+            print("Session recording complete, sending command over to device.")
             if self.ser and self.ser.is_open:
-                self.ser.write(b'END')
+                self.ser.write(b'END\n')
                 self.ser.close()
